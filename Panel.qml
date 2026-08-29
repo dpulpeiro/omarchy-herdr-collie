@@ -22,7 +22,7 @@ Panel {
     Qt.resolvedUrl("scripts/collie-control").toString().replace(/^file:\/\//, ""))
   readonly property bool active: status === "running"
   readonly property color statusColor: active ? Color.accent
-    : status === "partial" ? (root.bar ? root.bar.urgent : Color.urgent)
+    : status === "partial" ? Color.urgent
     : Qt.darker(root.barForeground, 1.55)
 
   function open() {
@@ -189,7 +189,7 @@ Panel {
           width: parent.width
           text: root.error
           textFormat: Text.PlainText
-          color: root.bar ? root.bar.urgent : Color.urgent
+          color: Color.urgent
           wrapMode: Text.Wrap
           font.family: root.bar ? root.bar.fontFamily : Style.font.family
           font.pixelSize: Style.font.bodySmall
