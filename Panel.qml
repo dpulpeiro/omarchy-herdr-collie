@@ -17,6 +17,7 @@ Panel {
   property string detail: "Checking Collie…"
   property string collieUrl: ""
   property string error: ""
+  property string actionError: ""
   property bool busy: false
   readonly property string controlScript: decodeURIComponent(
     Qt.resolvedUrl("scripts/collie-control").toString().replace(/^file:\/\//, ""))
@@ -48,6 +49,7 @@ Panel {
     if (busy) return
     busy = true
     error = ""
+    actionError = ""
     actionProcess.command = ["bash", root.controlScript, active ? "disable" : "enable"]
     actionProcess.running = true
   }
@@ -89,11 +91,11 @@ Panel {
     id: actionProcess
     stderr: StdioCollector {
       waitForEnd: true
-      onStreamFinished: root.error = String(text).trim()
+      onStreamFinished: root.actionError = String(text).trim()
     }
     onExited: function(exitCode) {
       root.busy = false
-      if (exitCode !== 0 && root.error === "") root.error = "Collie toggle failed"
+      root.error = exitCode === 0 ? "" : (root.actionError || "Collie toggle failed")
       root.refresh()
     }
   }
