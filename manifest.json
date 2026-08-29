@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "id": "io.github.dpulpeiro.collie",
+  "name": "Collie Control",
+  "version": "1.0.0",
+  "author": "Daniel Garcia Pulpeiro",
+  "license": "MIT",
+  "description": "Monitor and toggle the Collie bridge and its Tailscale endpoint from the Omarchy bar.",
+  "kinds": ["bar-widget"],
+  "entryPoints": {
+    "barWidget": "BarWidget.qml"
+  },
+  "barWidget": {
+    "displayName": "Collie Control",
+    "description": "Show Collie status, open its tailnet URL, and enable or disable it.",
+    "category": "System",
+    "allowMultiple": false,
+    "defaultSection": "right"
+  }
+}

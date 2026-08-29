@@ -1,0 +1,76 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+collie_port="${COLLIE_PORT:-8787}"
+
+require_command() {
+  command -v "$1" >/dev/null 2>&1 || {
+    printf 'Required command not found: %s\n' "$1" >&2
+    exit 1
+  }
+}
+
+service_active() {
+  systemctl --user is-active --quiet collie
+}
+
+serve_status() {
+  tailscale serve status 2>/dev/null || true
+}
+
+serve_active() {
+  local output
+  output="$(serve_status)"
+  [[ "$output" == *"proxy http://127.0.0.1:${collie_port}"* ]]
+}
+
+collie_url() {
+  serve_status | awk '/^https:\/\// { print $1; exit }'
+}
+
+show_status() {
+  local service=0 serve=0 url
+  service_active && service=1
+  serve_active && serve=1
+  url="$(collie_url)"
+
+  if (( service && serve )); then
+    printf 'running\tService and tailnet endpoint are active\t%s\n' "$url"
+  elif (( !service && !serve )); then
+    printf 'disabled\tService and tailnet endpoint are off\t%s\n' "$url"
+  elif (( service )); then
+    printf 'partial\tService is active, but the tailnet endpoint is off\t%s\n' "$url"
+  else
+    printf 'partial\tTailnet endpoint is active, but the service is stopped\t%s\n' "$url"
+  fi
+}
+
+require_command systemctl
+require_command tailscale
+
+case "${1:-status}" in
+  status)
+    show_status
+    ;;
+  enable)
+    systemctl --user start collie
+    tailscale serve --bg --yes --set-path=/ "$collie_port" >/dev/null
+    show_status
+    ;;
+  disable)
+    tailscale serve --https=443 off >/dev/null
+    systemctl --user stop collie
+    show_status
+    ;;
+  toggle)
+    if service_active && serve_active; then
+      "$0" disable
+    else
+      "$0" enable
+    fi
+    ;;
+  *)
+    printf 'usage: %s {status|enable|disable|toggle}\n' "$0" >&2
+    exit 2
+    ;;
+esac
