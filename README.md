@@ -34,6 +34,8 @@ That script is the only safe way to manage the tailnet front door:
 
 - It refuses to publish over a `tailscale serve` root mount it does not own, so enabling Collie cannot silently unpublish another service.
 - On teardown it removes only the mapping it recorded as its own, rather than clearing the whole HTTPS listener.
+- When upgrading from an older widget that created the Collie mapping directly, it first adopts a
+  matching Collie proxy through `collie-ctl.sh`, then removes it through the same ownership check.
 - It refreshes `COLLIE_TAILSCALE_HOSTS` on every start, so Collie's fail-closed Host allowlist stays correct after a tailnet address change.
 
 If `collie-ctl.sh` is not present, enable and disable fail with an error instead of falling back to raw `tailscale serve` calls.

@@ -124,7 +124,20 @@ do_enable() {
 }
 
 do_disable() {
+  local json url ownership_file
   resolve_collie_ctl
+
+  # Older versions of this widget published Collie directly, before Collie tracked ownership of
+  # its Tailscale root. Adopt only an existing handler that the status parser has already proved
+  # proxies to Collie's loopback port. collie-ctl.sh performs its own ownership check as well.
+  ownership_file="$(collie_config_dir)/tailscale-managed-handler"
+  if [[ ! -f "$ownership_file" ]] && json="$(serve_json)"; then
+    url="$(collie_url "$json")"
+    if [[ -n "$url" ]]; then
+      "$ctl" serve >/dev/null
+    fi
+  fi
+
   "$ctl" unserve >/dev/null
   "$ctl" stop >/dev/null
 }
