@@ -1,4 +1,4 @@
-# Omarchy Collie
+# Herdr Collie
 
 An Omarchy bar widget for [Collie](https://github.com/AltanS/collie), the mobile web UI for Herdr.
 
