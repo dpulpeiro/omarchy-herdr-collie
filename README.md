@@ -56,13 +56,13 @@ Note that enable and disable also control autostart at login, because `collie-ct
 From GitHub:
 
 ```sh
-omarchy plugin add https://github.com/dpulpeiro/omarchy-collie.git --enable
+omarchy plugin add https://github.com/dpulpeiro/omarchy-herdr-collie.git --enable
 ```
 
 For local development:
 
 ```sh
-omarchy plugin add ~/Documents/dpulpeiro/omarchy-collie --enable
+omarchy plugin add ~/Documents/dpulpeiro/omarchy-herdr-collie --enable
 ```
 
 Place it near the Tailscale widget:
