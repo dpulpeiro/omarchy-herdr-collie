@@ -69,8 +69,19 @@ Panel {
         var parts = String(text).trim().split("\t")
         root.status = parts[0] || "error"
         root.detail = parts[1] || "Collie status unavailable"
-        if (parts[2]) root.collieUrl = parts[2]
+        root.collieUrl = parts[2] || ""
       }
+    }
+  }
+
+  Timer {
+    interval: 120000
+    running: root.busy
+    onTriggered: {
+      actionProcess.running = false
+      root.busy = false
+      root.error = "Collie toggle timed out"
+      root.refresh()
     }
   }
 
@@ -131,6 +142,7 @@ Panel {
         Text {
           width: parent.width
           text: root.detail
+          textFormat: Text.PlainText
           color: root.barForeground
           opacity: 0.7
           wrapMode: Text.Wrap
@@ -155,6 +167,7 @@ Panel {
           Text {
             width: parent.width
             text: root.collieUrl
+            textFormat: Text.PlainText
             color: Color.accent
             wrapMode: Text.WrapAnywhere
             font.family: root.bar ? root.bar.fontFamily : Style.font.family
@@ -175,6 +188,7 @@ Panel {
           visible: root.error !== ""
           width: parent.width
           text: root.error
+          textFormat: Text.PlainText
           color: root.barUrgent
           wrapMode: Text.Wrap
           font.family: root.bar ? root.bar.fontFamily : Style.font.family

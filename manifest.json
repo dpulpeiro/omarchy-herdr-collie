@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "io.github.dpulpeiro.collie",
   "name": "Collie Control",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "author": "Daniel Garcia Pulpeiro",
   "license": "MIT",
   "description": "Monitor and toggle the Collie bridge and its Tailscale endpoint from the Omarchy bar.",

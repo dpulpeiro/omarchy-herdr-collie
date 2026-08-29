@@ -1,7 +1,32 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-collie_port="${COLLIE_PORT:-8787}"
+ctl=""
+
+collie_config_dir() {
+  if [[ -n "${HERDR_PLUGIN_CONFIG_DIR:-}" ]]; then
+    printf '%s\n' "$HERDR_PLUGIN_CONFIG_DIR"
+  else
+    printf '%s\n' "${HOME}/.config/herdr/plugins/config/herdr.collie"
+  fi
+}
+
+port_from_collie_config() {
+  local env_file
+  env_file="$(collie_config_dir)/.env"
+  [[ -f "$env_file" ]] || return 0
+  sed -n 's/^[[:space:]]*COLLIE_PORT[[:space:]]*=[[:space:]]*"\?\([0-9]\{1,5\}\)"\?[[:space:]]*$/\1/p' \
+    "$env_file" | tail -n1
+}
+
+collie_port="${COLLIE_PORT:-}"
+[[ -n "$collie_port" ]] || collie_port="$(port_from_collie_config)"
+collie_port="${collie_port:-8787}"
+
+[[ "$collie_port" =~ ^[0-9]{1,5}$ ]] || {
+  printf 'COLLIE_PORT must be a port number, got: %s\n' "$collie_port" >&2
+  exit 1
+}
 
 require_command() {
   command -v "$1" >/dev/null 2>&1 || {
@@ -10,29 +35,66 @@ require_command() {
   }
 }
 
+# Collie ships collie-ctl.sh, which is the only safe way to publish and retract the tailnet front
+# door: it refuses to overwrite a `tailscale serve` root mount it does not own, and it retracts only
+# the mapping it recorded as its own. Reimplementing that here would silently unpublish unrelated
+# services, so a missing ctl is a hard failure rather than a fallback to raw `tailscale serve`.
+find_collie_ctl() {
+  local candidate
+  for candidate in "${HOME}"/.config/herdr/plugins/github/herdr.collie-*/scripts/collie-ctl.sh; do
+    if [[ -x "$candidate" ]]; then
+      printf '%s\n' "$candidate"
+      return 0
+    fi
+  done
+  return 1
+}
+
+resolve_collie_ctl() {
+  ctl="$(find_collie_ctl || true)"
+  [[ -n "$ctl" ]] || {
+    printf 'collie-ctl.sh not found. Install Collie as the herdr.collie Herdr plugin first.\n' >&2
+    exit 1
+  }
+}
+
 service_active() {
   systemctl --user is-active --quiet collie
 }
 
-serve_status() {
-  tailscale serve status 2>/dev/null || true
+serve_json() {
+  tailscale serve status --json 2>/dev/null || true
 }
 
-serve_active() {
-  local output
-  output="$(serve_status)"
-  [[ "$output" == *"proxy http://127.0.0.1:${collie_port}"* ]]
-}
-
+# The tailnet URL of the handler that proxies to our loopback port, or nothing when Collie is not
+# published. Keyed on the proxy target rather than on position, so an unrelated mapping listed first
+# is never mistaken for Collie's. Reads the scheme from the TCP entry so http serve mode and
+# non-default serve ports resolve correctly.
 collie_url() {
-  serve_status | awk '/^https:\/\// { print $1; exit }'
+  local json="$1"
+  [[ -n "$json" ]] || return 0
+  printf '%s' "$json" | jq -r --arg proxy "http://127.0.0.1:${collie_port}" '
+    . as $root
+    | (.Web // {})
+    | to_entries[]
+    | select([.value.Handlers // {} | to_entries[] | .value.Proxy] | index($proxy))
+    | .key as $hostport
+    | ($hostport | capture("^(?<host>.*):(?<port>[0-9]+)$")) as $parts
+    | (if (($root.TCP // {})[$parts.port].HTTPS // false) then "https" else "http" end) as $scheme
+    | if ($scheme == "https" and $parts.port == "443")
+        or ($scheme == "http" and $parts.port == "80")
+      then $scheme + "://" + $parts.host
+      else $scheme + "://" + $hostport
+      end
+  ' 2>/dev/null | head -n1 || true
 }
 
 show_status() {
-  local service=0 serve=0 url
-  service_active && service=1
-  serve_active && serve=1
-  url="$(collie_url)"
+  local json url service=0 serve=0
+  json="$(serve_json)"
+  url="$(collie_url "$json")"
+  service_active && service=1 || true
+  [[ -n "$url" ]] && serve=1 || true
 
   if (( service && serve )); then
     printf 'running\tService and tailnet endpoint are active\t%s\n' "$url"
@@ -45,29 +107,40 @@ show_status() {
   fi
 }
 
+do_enable() {
+  resolve_collie_ctl
+  "$ctl" start >/dev/null
+}
+
+do_disable() {
+  resolve_collie_ctl
+  "$ctl" unserve >/dev/null
+  "$ctl" stop >/dev/null
+}
+
 require_command systemctl
 require_command tailscale
+require_command jq
 
 case "${1:-status}" in
   status)
     show_status
     ;;
   enable)
-    systemctl --user start collie
-    tailscale serve --bg --yes --set-path=/ "$collie_port" >/dev/null
+    do_enable
     show_status
     ;;
   disable)
-    tailscale serve --https=443 off >/dev/null
-    systemctl --user stop collie
+    do_disable
     show_status
     ;;
   toggle)
-    if service_active && serve_active; then
-      "$0" disable
+    if service_active && [[ -n "$(collie_url "$(serve_json)")" ]]; then
+      do_disable
     else
-      "$0" enable
+      do_enable
     fi
+    show_status
     ;;
   *)
     printf 'usage: %s {status|enable|disable|toggle}\n' "$0" >&2

@@ -2,17 +2,52 @@
 
 An Omarchy bar widget for [Collie](https://github.com/AltanS/collie), the mobile web UI for Herdr.
 
-The widget shows whether both the Collie user service and its Tailscale Serve endpoint are active. Its panel displays the tailnet URL and can enable or disable both components together.
+The widget shows whether both the Collie user service and its Tailscale Serve endpoint are active.
+Its panel displays the tailnet URL and can enable or disable both components together.
+
+## Read this before enabling
+
+**Collie is remote shell access to this machine.**
+It drives your Herdr panes, which means typing into your terminals.
+Enabling it from this widget publishes that surface to every device on your tailnet.
+
+- This plugin only ever uses `tailscale serve`, which is tailnet-only.
+  It never enables `tailscale funnel`, so Collie is never exposed to the public internet.
+- **How well that surface is protected is Collie's configuration, not this plugin's.**
+  Collie only enforces a Tailscale identity check when `COLLIE_TRUSTED_USER` is set, and nothing sets it for you.
+  With it unset, any tailnet peer that can reach the host gets full read and write access to your terminals.
+
+Set it before you enable the widget, in `~/.config/herdr/plugins/config/herdr.collie/.env`:
+
+```sh
+COLLIE_TRUSTED_USER=you@example.com
+```
+
+Omarchy plugins run unsandboxed with your full user permissions.
+There is no plugin permission model, so installing this plugin is a decision to trust its code.
+
+## How enable and disable work
+
+Both actions delegate to Collie's own `collie-ctl.sh`, which this plugin locates under
+`~/.config/herdr/plugins/github/herdr.collie-*/scripts/collie-ctl.sh`.
+That script is the only safe way to manage the tailnet front door:
+
+- It refuses to publish over a `tailscale serve` root mount it does not own, so enabling Collie cannot silently unpublish another service.
+- On teardown it removes only the mapping it recorded as its own, rather than clearing the whole HTTPS listener.
+- It refreshes `COLLIE_TAILSCALE_HOSTS` on every start, so Collie's fail-closed Host allowlist stays correct after a tailnet address change.
+
+If `collie-ctl.sh` is not present, enable and disable fail with an error instead of falling back to raw `tailscale serve` calls.
+
+Note that enable and disable also control autostart at login, because `collie-ctl.sh` uses
+`systemctl --user enable --now` and `disable --now`.
 
 ## Requirements
 
 - Omarchy with the Quattro shell plugin system
-- Collie installed as the `herdr.collie` Herdr plugin
+- Collie installed as the `herdr.collie` Herdr plugin, including its `collie-ctl.sh`
 - The `collie.service` systemd user unit created by Collie
 - Tailscale with Serve enabled
-- Bash, systemd, and `awk`
-
-The plugin runs unsandboxed with your user permissions. Enabling it starts `collie.service` and publishes Collie's loopback port through tailnet-only Tailscale Serve. Disabling it removes the HTTPS port 443 Serve mapping and stops the service. It never enables Tailscale Funnel.
+- Bash, systemd, and `jq`
 
 ## Install
 
@@ -36,13 +71,19 @@ omarchy bar move io.github.dpulpeiro.collie --after omarchy.tailscale
 
 ## Usage
 
-Click the Collie icon to open its panel. The icon is green when both the service and tailnet endpoint are active, dim when both are disabled, and urgent-colored when only one is active.
+Click the Collie icon to open its panel.
+The icon is green when both the service and tailnet endpoint are active, dim when both are disabled, and urgent-colored when only one is active.
 
-Click the displayed tailnet URL to open Collie. Use the panel button to enable or disable the service and endpoint together.
+Click the displayed tailnet URL to open Collie.
+Use the panel button to enable or disable the service and endpoint together.
+
+The first enable after an update may take a while, because `collie-ctl.sh` builds Collie's web bundle before starting.
 
 ## Configuration
 
-Collie's default loopback port is `8787`. To use a different port, expose `COLLIE_PORT` in the Omarchy shell environment before loading the plugin.
+The widget reads Collie's port from `COLLIE_PORT` in
+`~/.config/herdr/plugins/config/herdr.collie/.env`, falling back to `8787`.
+To override it for the widget alone, export `COLLIE_PORT` in the Omarchy shell environment before loading the plugin.
 
 ## Validate
 
