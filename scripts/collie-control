@@ -62,8 +62,10 @@ service_active() {
   systemctl --user is-active --quiet collie
 }
 
+# Fails when the serve config cannot be read at all, which is a different state from "Collie is not
+# published" and must not be reported as one. An empty-but-valid config is `{}` with exit 0.
 serve_json() {
-  tailscale serve status --json 2>/dev/null || true
+  tailscale serve status --json 2>/dev/null
 }
 
 # The tailnet URL of the handler that proxies to our loopback port, or nothing when Collie is not
@@ -91,9 +93,18 @@ collie_url() {
 
 show_status() {
   local json url service=0 serve=0
-  json="$(serve_json)"
-  url="$(collie_url "$json")"
   service_active && service=1 || true
+
+  if ! json="$(serve_json)"; then
+    if (( service )); then
+      printf 'unknown\tService is active, but the tailnet endpoint state is unavailable\t\n'
+    else
+      printf 'unknown\tCollie state is unavailable\t\n'
+    fi
+    return 0
+  fi
+
+  url="$(collie_url "$json")"
   [[ -n "$url" ]] && serve=1 || true
 
   if (( service && serve )); then
@@ -135,7 +146,7 @@ case "${1:-status}" in
     show_status
     ;;
   toggle)
-    if service_active && [[ -n "$(collie_url "$(serve_json)")" ]]; then
+    if [[ "$(show_status | cut -f1)" == "running" ]]; then
       do_disable
     else
       do_enable

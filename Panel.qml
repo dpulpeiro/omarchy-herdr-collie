@@ -22,8 +22,8 @@ Panel {
     Qt.resolvedUrl("scripts/collie-control").toString().replace(/^file:\/\//, ""))
   readonly property bool active: status === "running"
   readonly property color statusColor: active ? Color.accent
-    : status === "disabled" ? Qt.darker(root.barForeground, 1.55)
-    : root.barUrgent
+    : status === "partial" ? root.barUrgent
+    : Qt.darker(root.barForeground, 1.55)
 
   function open() {
     root.controller.show()

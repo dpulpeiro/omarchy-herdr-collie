@@ -14,8 +14,8 @@ BarWidget {
     Qt.resolvedUrl("scripts/collie-control").toString().replace(/^file:\/\//, ""))
   readonly property bool active: status === "running"
   readonly property color statusColor: active ? Color.accent
-    : status === "disabled" ? Qt.darker(bar.foreground, 1.55)
-    : bar.urgent
+    : status === "partial" ? bar.urgent
+    : Qt.darker(bar.foreground, 1.55)
   readonly property bool opened: panelLoader.item
     ? panelLoader.item.opened === true
     : false

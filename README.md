@@ -72,7 +72,8 @@ omarchy bar move io.github.dpulpeiro.collie --after omarchy.tailscale
 ## Usage
 
 Click the Collie icon to open its panel.
-The icon is green when both the service and tailnet endpoint are active, dim when both are disabled, and urgent-colored when only one is active.
+The icon is green when both the service and tailnet endpoint are active, urgent-colored when only one of the two is active, and dim otherwise.
+If the Tailscale daemon cannot be queried the panel reports an unknown state rather than claiming the endpoint is off.
 
 Click the displayed tailnet URL to open Collie.
 Use the panel button to enable or disable the service and endpoint together.
