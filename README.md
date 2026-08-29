@@ -62,7 +62,10 @@ omarchy plugin add https://github.com/dpulpeiro/omarchy-herdr-collie.git --enabl
 For local development:
 
 ```sh
-omarchy plugin add ~/Documents/dpulpeiro/omarchy-herdr-collie --enable
+git clone https://github.com/dpulpeiro/omarchy-herdr-collie.git
+cd omarchy-herdr-collie
+omarchy plugin validate .
+omarchy plugin add "$PWD" --enable
 ```
 
 Place it near the Tailscale widget:
