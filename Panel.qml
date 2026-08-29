@@ -97,6 +97,8 @@ Panel {
       root.busy = false
       root.error = exitCode === 0 ? "" : (root.actionError || "Collie toggle failed")
       root.refresh()
+      if (root.hostWidget && typeof root.hostWidget.refresh === "function")
+        root.hostWidget.refresh()
     }
   }
 
