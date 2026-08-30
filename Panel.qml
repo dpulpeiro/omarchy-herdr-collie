@@ -21,10 +21,11 @@ Panel {
   property bool busy: false
   readonly property string controlScript: decodeURIComponent(
     Qt.resolvedUrl("scripts/collie-control").toString().replace(/^file:\/\//, ""))
+  readonly property color panelForeground: root.bar ? root.bar.foreground : Color.foreground
   readonly property bool active: status === "running"
   readonly property color statusColor: active ? Color.accent
     : status === "partial" ? Color.urgent
-    : Qt.darker(root.barForeground, 1.55)
+    : Qt.darker(root.panelForeground, 1.55)
 
   function open() {
     root.controller.show()
@@ -128,7 +129,7 @@ Panel {
 
           Text {
             text: "Collie"
-            color: root.barForeground
+            color: root.panelForeground
             font.family: root.bar ? root.bar.fontFamily : Style.font.family
             font.pixelSize: Style.font.subtitle
             font.bold: true
@@ -147,7 +148,7 @@ Panel {
           width: parent.width
           text: root.detail
           textFormat: Text.PlainText
-          color: root.barForeground
+          color: root.panelForeground
           opacity: 0.7
           wrapMode: Text.Wrap
           font.family: root.bar ? root.bar.fontFamily : Style.font.family
@@ -162,7 +163,7 @@ Panel {
           Text {
             width: parent.width
             text: "Collie URL"
-            color: root.barForeground
+            color: root.panelForeground
             opacity: 0.65
             font.family: root.bar ? root.bar.fontFamily : Style.font.family
             font.pixelSize: Style.font.caption
