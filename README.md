@@ -5,6 +5,8 @@ An Omarchy bar widget for [Collie](https://github.com/AltanS/collie), the mobile
 The widget shows whether both the Collie user service and its Tailscale Serve endpoint are active.
 Its panel displays the tailnet URL and can enable or disable both components together.
 
+![The Herdr Collie bar icon and its open panel, showing a running status, the tailnet URL, and the disable action](preview.png)
+
 ## Read this before enabling
 
 **Collie is remote shell access to this machine.**
